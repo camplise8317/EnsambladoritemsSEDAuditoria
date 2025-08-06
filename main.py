@@ -1,36 +1,3 @@
-¡Por supuesto\! Entiendo perfectamente. Quieres el guion completo, final y corregido, sin omisiones, listo para funcionar.
-
-A continuación, te presento el código íntegro de la aplicación `app.py`. Este archivo ya incluye **todas las mejoras de prompts, la lógica de auditoría cruzada y la corrección del `AttributeError`** que discutimos.
-
-### **Instrucciones**
-
-1.  **Reemplaza Todo:** Borra por completo el contenido de tu archivo `.py` actual.
-2.  **Copia y Pega:** Copia el bloque de código de abajo y pégalo en el archivo vacío.
-3.  **Crea `requirements.txt`:** Asegúrate de tener un archivo `requirements.txt` en la misma carpeta con este contenido:
-    ```text
-    streamlit
-    pandas
-    openpyxl
-    python-docx-template
-    google-generativeai
-    openai
-    ```
-4.  **Instala las Librerías:** Desde tu terminal, en la carpeta del proyecto, ejecuta:
-    ```bash
-    pip install -r requirements.txt
-    ```
-5.  **Ejecuta la App:**
-    ```bash
-    streamlit run tu_archivo.py
-    ```
-
------
-
-### **Código Completo y Final de la Aplicación (`app.py`)**
-
-````python
-# -*- coding: utf-8 -*-
-
 import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
