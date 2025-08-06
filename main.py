@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
@@ -69,7 +71,8 @@ def generar_contenido(modelo_cliente, nombre_modelo_api, prompt):
     try:
         if isinstance(modelo_cliente, genai.GenerativeModel):
             response = modelo_cliente.generate_content(prompt)
-            return response.text.strip()
+            # Asegurarse de que la respuesta tenga texto antes de devolverla
+            return response.text.strip() if hasattr(response, 'text') and response.text else ""
         elif isinstance(modelo_cliente, openai.OpenAI):
             chat_completion = modelo_cliente.chat.completions.create(
                 messages=[
@@ -220,7 +223,7 @@ Eres un auditor de calidad experto en evaluación pedagógica. Tu misión es rev
 ---
 
 ✅ TU TAREA DE AUDITORÍA:
-Revisa el "TEXTO GENERADO" y compáralo contra las "INSTRUCCIONES DEL PROMPT ORIGINAL". Responde únicamente con la siguiente estructura. No añadas texto fuera de la estructura.
+Revisa el "TEXTO GENERADO" y compáralo contra las "INSTRUCCIONES DEL PROMPT ORIGINAL". Responde únicamente con la siguiente estructura. No añadas texto fuera de esta estructura.
 
 VEREDICTO: [APROBADO o REQUIERE REVISIÓN]
 
@@ -279,14 +282,12 @@ with col_aud:
     )
 
 if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary"):
-    # Validación de entradas
     is_gemini_needed = "Gemini" in [modelo_generador_nombre, modelo_auditor_nombre]
     is_gpt_needed = any("GPT" in name for name in [modelo_generador_nombre, modelo_auditor_nombre])
 
     if not archivo_excel or (is_gemini_needed and not gemini_api_key) or (is_gpt_needed and not openai_api_key):
         st.error("Por favor, sube un archivo Excel y asegúrate de ingresar las claves API necesarias para los modelos seleccionados.")
     else:
-        # Configurar clientes de IA
         gemini_model = setup_gemini_model(gemini_api_key) if is_gemini_needed else True
         openai_client = setup_openai_model(openai_api_key) if is_gpt_needed else True
 
@@ -306,7 +307,6 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
                 if df[col].dtype == 'object':
                     df[col] = df[col].apply(limpiar_html)
 
-            # Preparar columnas para los resultados
             columnas_nuevas = ["Que_Evalua", "Justificacion_Correcta", "Analisis_Distractores", "Recomendacion_Fortalecer", "Recomendacion_Avanzar"]
             for col in columnas_nuevas:
                 if col not in df.columns:
@@ -326,26 +326,32 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
                     prompt_actual = construir_prompt_analisis(fila)
                     texto_actual = generar_contenido(cliente_generador, nombre_gen_api, prompt_actual)
 
-                    if auditoria_activada and texto_actual != "ERROR API":
+                    if auditoria_activada and isinstance(texto_actual, str) and "ERROR API" not in texto_actual:
                         for audit_pass in range(3):
                             feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
+                            
                             with st.expander(f"Ver Auditoría de Análisis #{audit_pass + 1}"):
-                                st.markdown(f"```\n{feedback}\n```")
-                            if "APROBADO" in feedback:
+                                if isinstance(feedback, str):
+                                    st.markdown(f"```\n{feedback}\n```")
+                                else:
+                                    st.error("La auditoría no devolvió una respuesta de texto válida.")
+
+                            if isinstance(feedback, str) and "APROBADO" in feedback:
                                 st.success(f"Análisis Aprobado en el intento #{audit_pass + 1}")
                                 break
+                            
                             if audit_pass < 2:
                                 st.warning(f"Análisis requiere revisión. Refinando... (Intento {audit_pass + 2})")
                                 refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido."
                                 texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
                                 time.sleep(1)
+                            else:
+                                st.error(f"El análisis para el ítem {item_id} no fue aprobado después de 3 intentos.")
                     
-                    # Separar y guardar el análisis final (con protección de errores)
                     if isinstance(texto_actual, str) and texto_actual:
                         header_que_evalua = "Qué Evalúa:"
                         header_correcta = "Ruta Cognitiva Correcta:"
                         header_distractores = "Análisis de Opciones No Válidas:"
-                        
                         idx_correcta = texto_actual.find(header_correcta)
                         idx_distractores = texto_actual.find(header_distractores)
                         
@@ -369,21 +375,28 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
                     prompt_actual = construir_prompt_recomendaciones(fila)
                     texto_actual = generar_contenido(cliente_generador, nombre_gen_api, prompt_actual)
                     
-                    if auditoria_activada and texto_actual != "ERROR API":
+                    if auditoria_activada and isinstance(texto_actual, str) and "ERROR API" not in texto_actual:
                         for audit_pass in range(3):
                             feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
+                            
                             with st.expander(f"Ver Auditoría de Recomendaciones #{audit_pass + 1}"):
-                                st.markdown(f"```\n{feedback}\n```")
-                            if "APROBADO" in feedback:
+                                if isinstance(feedback, str):
+                                    st.markdown(f"```\n{feedback}\n```")
+                                else:
+                                    st.error("La auditoría no devolvió una respuesta de texto válida.")
+                            
+                            if isinstance(feedback, str) and "APROBADO" in feedback:
                                 st.success(f"Recomendaciones Aprobadas en el intento #{audit_pass + 1}")
                                 break
+
                             if audit_pass < 2:
                                 st.warning(f"Recomendaciones requieren revisión. Refinando... (Intento {audit_pass + 2})")
                                 refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido (Fortalecer y Avanzar)."
                                 texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
                                 time.sleep(1)
-                    
-                    # Separar y guardar las recomendaciones finales (con protección de errores)
+                            else:
+                                st.error(f"Las recomendaciones para el ítem {item_id} no fueron aprobadas después de 3 intentos.")
+
                     if isinstance(texto_actual, str) and texto_actual:
                         titulo_avanzar = "RECOMENDACIÓN PARA AVANZAR"
                         idx_avanzar = texto_actual.upper().find(titulo_avanzar)
@@ -408,7 +421,6 @@ if st.session_state.df_enriquecido is not None:
     st.header("Paso 3: Verifica los Datos Enriquecidos")
     st.dataframe(st.session_state.df_enriquecido.head())
     
-    # Opción para descargar el Excel enriquecido
     output_excel = BytesIO()
     with pd.ExcelWriter(output_excel, engine='openpyxl') as writer:
         st.session_state.df_enriquecido.to_excel(writer, index=False, sheet_name='Datos Enriquecidos')
@@ -445,7 +457,6 @@ if st.session_state.df_enriquecido is not None and archivo_plantilla is not None
                     for i, fila in df_final.iterrows():
                         doc = DocxTemplate(plantilla_bytes)
                         contexto = fila.to_dict()
-                        # Asegurarse de que los valores nulos se manejen bien en la plantilla
                         contexto_limpio = {k: (v if pd.notna(v) else "") for k, v in contexto.items()}
                         doc.render(contexto_limpio)
                         
@@ -453,7 +464,7 @@ if st.session_state.df_enriquecido is not None and archivo_plantilla is not None
                         doc.save(doc_buffer)
                         doc_buffer.seek(0)
                         
-                        nombre_base = str(fila[columna_nombre_archivo]).replace('/', '_').replace('\\', '_')
+                        nombre_base = str(fila.get(columna_nombre_archivo, f"ficha_{i+1}")).replace('/', '_').replace('\\', '_')
                         nombre_archivo_salida = f"{nombre_base}.docx"
                         
                         zip_file.writestr(nombre_archivo_salida, doc_buffer.getvalue())
