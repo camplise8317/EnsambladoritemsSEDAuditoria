@@ -1,3 +1,34 @@
+¡Por supuesto\! Entiendo perfectamente. Quieres el guion completo, final y corregido, sin omisiones, listo para funcionar.
+
+A continuación, te presento el código íntegro de la aplicación `app.py`. Este archivo ya incluye **todas las mejoras de prompts, la lógica de auditoría cruzada y la corrección del `AttributeError`** que discutimos.
+
+### **Instrucciones**
+
+1.  **Reemplaza Todo:** Borra por completo el contenido de tu archivo `.py` actual.
+2.  **Copia y Pega:** Copia el bloque de código de abajo y pégalo en el archivo vacío.
+3.  **Crea `requirements.txt`:** Asegúrate de tener un archivo `requirements.txt` en la misma carpeta con este contenido:
+    ```text
+    streamlit
+    pandas
+    openpyxl
+    python-docx-template
+    google-generativeai
+    openai
+    ```
+4.  **Instala las Librerías:** Desde tu terminal, en la carpeta del proyecto, ejecuta:
+    ```bash
+    pip install -r requirements.txt
+    ```
+5.  **Ejecuta la App:**
+    ```bash
+    streamlit run tu_archivo.py
+    ```
+
+-----
+
+### **Código Completo y Final de la Aplicación (`app.py`)**
+
+````python
 # -*- coding: utf-8 -*-
 
 import streamlit as st
@@ -84,7 +115,7 @@ def generar_contenido(modelo_cliente, nombre_modelo_api, prompt):
             return chat_completion.choices[0].message.content.strip()
     except Exception as e:
         st.warning(f"Error durante la generación de contenido: {e}")
-        time.sleep(5) # Pausa por si es un error de rate limit
+        time.sleep(3) # Pausa por si es un error de rate limit
         return f"ERROR API: {str(e)}"
 
 # --- Funciones de Construcción de Prompts ---
@@ -222,21 +253,20 @@ Eres un auditor de calidad experto en evaluación pedagógica. Tu misión es rev
 ---
 
 ✅ TU TAREA DE AUDITORÍA:
-Revisa el "TEXTO GENERADO" y compáralo contra las "INSTRUCCIONES DEL PROMPT ORIGINAL". Responde únicamente con la siguiente estructura JSON. No añadas texto fuera del JSON:
+Revisa el "TEXTO GENERADO" y compáralo contra las "INSTRUCCIONES DEL PROMPT ORIGINAL". Responde únicamente con la siguiente estructura. No añadas texto fuera de la estructura.
 
-{{
-  "veredicto": "[APROBADO o REQUIERE REVISIÓN]",
-  "analisis_cumplimiento": {{
-    "fidelidad_taxonomia": "[Indica si cumple y por qué, o dónde falla]",
-    "cero_produccion_escrita": "[Confirma si se cumple la regla de no escritura]",
-    "novedad_creatividad": "[Evalúa si la actividad es novedosa o un ejercicio típico]",
-    "redaccion_impersonal": "[Verifica si el tono es consistentemente impersonal]",
-    "progresion_logica": "[Analiza si la progresión Fortalecer/Avanzar es lógica, si aplica]"
-  }},
-  "sugerencias_mejora": "[Si el VEREDICTO es 'REQUIERE REVISIÓN', proporciona sugerencias claras y accionables para que la otra IA corrija el texto. Si es 'APROBADO', escribe 'Ninguna'.]"
-}}
+VEREDICTO: [APROBADO o REQUIERE REVISIÓN]
+
+ANÁLISIS DE CUMPLIMIENTO:
+- Fidelidad a la Taxonomía: [Indica si cumple y por qué, o dónde falla]
+- Cero Producción Escrita: [Confirma si se cumple la regla de no escritura]
+- Novedad y Creatividad: [Evalúa si la actividad es novedosa o un ejercicio típico]
+- Redacción Impersonal: [Verifica si el tono es consistentemente impersonal]
+- Progresión Lógica (si aplica): [Analiza si la progresión Fortalecer/Avanzar es lógica]
+
+SUGERENCIAS DE MEJORA:
+[Si el VEREDICTO es "REQUIERE REVISIÓN", proporciona sugerencias claras y accionables para que la otra IA corrija el texto. Si es "APROBADO", escribe "Ninguna".]
 """
-
 
 # --- INTERFAZ PRINCIPAL DE STREAMLIT ---
 st.title("🤖 Ensamblador de Fichas con Auditoría Cruzada de IA")
@@ -312,7 +342,8 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
             # Preparar columnas para los resultados
             columnas_nuevas = ["Que_Evalua", "Justificacion_Correcta", "Analisis_Distractores", "Recomendacion_Fortalecer", "Recomendacion_Avanzar"]
             for col in columnas_nuevas:
-                df[col] = ""
+                if col not in df.columns:
+                    df[col] = ""
 
             progress_bar_main = st.progress(0, text="Iniciando Proceso...")
             total_filas = len(df)
@@ -332,59 +363,73 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
                         for audit_pass in range(3):
                             feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
                             with st.expander(f"Ver Auditoría de Análisis #{audit_pass + 1}"):
-                                st.markdown(feedback)
+                                st.markdown(f"```\n{feedback}\n```")
                             if "APROBADO" in feedback:
                                 st.success(f"Análisis Aprobado en el intento #{audit_pass + 1}")
                                 break
-                            st.warning(f"Análisis requiere revisión. Refinando... (Intento {audit_pass + 2})")
-                            refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido."
-                            texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
-                            time.sleep(1)
+                            if audit_pass < 2:
+                                st.warning(f"Análisis requiere revisión. Refinando... (Intento {audit_pass + 2})")
+                                refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido."
+                                texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
+                                time.sleep(1)
                     
-                    # Separar y guardar el análisis final
-                    header_que_evalua = "Qué Evalúa:"
-                    header_correcta = "Ruta Cognitiva Correcta:"
-                    header_distractores = "Análisis de Opciones No Válidas:"
-                    idx_correcta = texto_actual.find(header_correcta)
-                    idx_distractores = texto_actual.find(header_distractores)
-                    if idx_correcta != -1 and idx_distractores != -1:
-                        df.loc[i, "Que_Evalua"] = texto_actual[len(header_que_evalua):idx_correcta].strip()
-                        df.loc[i, "Justificacion_Correcta"] = texto_actual[idx_correcta + len(header_correcta):idx_distractores].strip()
-                        df.loc[i, "Analisis_Distractores"] = texto_actual[idx_distractores + len(header_distractores):].strip()
+                    # Separar y guardar el análisis final (con protección de errores)
+                    if isinstance(texto_actual, str) and texto_actual:
+                        header_que_evalua = "Qué Evalúa:"
+                        header_correcta = "Ruta Cognitiva Correcta:"
+                        header_distractores = "Análisis de Opciones No Válidas:"
+                        
+                        idx_correcta = texto_actual.find(header_correcta)
+                        idx_distractores = texto_actual.find(header_distractores)
+                        
+                        if idx_correcta != -1 and idx_distractores != -1 and texto_actual.startswith(header_que_evalua):
+                            df.loc[i, "Que_Evalua"] = texto_actual[len(header_que_evalua):idx_correcta].strip()
+                            df.loc[i, "Justificacion_Correcta"] = texto_actual[idx_correcta + len(header_correcta):idx_distractores].strip()
+                            df.loc[i, "Analisis_Distractores"] = texto_actual[idx_distractores + len(header_distractores):].strip()
+                        else:
+                            df.loc[i, "Que_Evalua"] = "ERROR DE PARSEO"
+                            df.loc[i, "Justificacion_Correcta"] = texto_actual
+                            df.loc[i, "Analisis_Distractores"] = ""
                     else:
-                         df.loc[i, "Que_Evalua"] = "ERROR PARSEO"
-                         df.loc[i, "Justificacion_Correcta"] = texto_actual
-                         df.loc[i, "Analisis_Distractores"] = "ERROR PARSEO"
-
+                        st.warning(f"La API no devolvió un texto válido para el análisis del ítem {item_id}.")
+                        df.loc[i, "Que_Evalua"] = "ERROR API: Respuesta no válida"
+                        df.loc[i, "Justificacion_Correcta"] = "ERROR API: Respuesta no válida"
+                        df.loc[i, "Analisis_Distractores"] = "ERROR API: Respuesta no válida"
 
                 # --- Generación y Auditoría de RECOMENDACIONES ---
                 with st.container(border=True):
                     st.write("#### 2. Generando y Auditando: Recomendaciones Pedagógicas")
                     prompt_actual = construir_prompt_recomendaciones(fila)
                     texto_actual = generar_contenido(cliente_generador, nombre_gen_api, prompt_actual)
-
+                    
                     if auditoria_activada and texto_actual != "ERROR API":
                         for audit_pass in range(3):
                             feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
                             with st.expander(f"Ver Auditoría de Recomendaciones #{audit_pass + 1}"):
-                                st.markdown(feedback)
+                                st.markdown(f"```\n{feedback}\n```")
                             if "APROBADO" in feedback:
                                 st.success(f"Recomendaciones Aprobadas en el intento #{audit_pass + 1}")
                                 break
-                            st.warning(f"Recomendaciones requieren revisión. Refinando... (Intento {audit_pass + 2})")
-                            refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido (Fortalecer y Avanzar)."
-                            texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
-                            time.sleep(1)
+                            if audit_pass < 2:
+                                st.warning(f"Recomendaciones requieren revisión. Refinando... (Intento {audit_pass + 2})")
+                                refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido (Fortalecer y Avanzar)."
+                                texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
+                                time.sleep(1)
                     
-                    # Separar y guardar las recomendaciones finales
-                    titulo_avanzar = "RECOMENDACIÓN PARA AVANZAR"
-                    idx_avanzar = texto_actual.upper().find(titulo_avanzar)
-                    if idx_avanzar != -1:
-                        df.loc[i, "Recomendacion_Fortalecer"] = texto_actual[:idx_avanzar].strip()
-                        df.loc[i, "Recomendacion_Avanzar"] = texto_actual[idx_avanzar:].strip()
+                    # Separar y guardar las recomendaciones finales (con protección de errores)
+                    if isinstance(texto_actual, str) and texto_actual:
+                        titulo_avanzar = "RECOMENDACIÓN PARA AVANZAR"
+                        idx_avanzar = texto_actual.upper().find(titulo_avanzar)
+                        if idx_avanzar != -1:
+                            df.loc[i, "Recomendacion_Fortalecer"] = texto_actual[:idx_avanzar].strip()
+                            df.loc[i, "Recomendacion_Avanzar"] = texto_actual[idx_avanzar:].strip()
+                        else:
+                            df.loc[i, "Recomendacion_Fortalecer"] = texto_actual
+                            df.loc[i, "Recomendacion_Avanzar"] = "ERROR DE PARSEO: No se encontró 'AVANZAR'"
                     else:
-                        df.loc[i, "Recomendacion_Fortalecer"] = texto_actual
-                        df.loc[i, "Recomendacion_Avanzar"] = "ERROR PARSEO: No se encontró 'AVANZAR'"
+                        st.warning(f"La API no devolvió un texto válido para las recomendaciones del ítem {item_id}.")
+                        df.loc[i, "Recomendacion_Fortalecer"] = "ERROR API: Respuesta no válida"
+                        df.loc[i, "Recomendacion_Avanzar"] = "ERROR API: Respuesta no válida"
 
             progress_bar_main.progress(1.0, text="¡Proceso completado!")
             st.session_state.df_enriquecido = df
