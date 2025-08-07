@@ -105,30 +105,37 @@ def construir_prompt_analisis(fila):
 Eres un experto psicómetra y pedagogo, especializado en la deconstrucción cognitiva de ítems de evaluación de lectura. Tu misión es realizar un análisis tripartito y riguroso de un ítem, explicando qué evalúa, cómo se resuelve correctamente y por qué las opciones incorrectas (distractores) son atractivas para un estudiante que comete un error específico de razonamiento.
 
 🧠 INSUMOS DE ENTRADA
+- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
 - Descripción del Ítem: {descripcion_item}
 - Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Competencia: {fila.get('CompetenciaNombre', '')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
 - Grado Escolar: {fila.get('ItemGradoId', '')}
+- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
+- Opción A: {fila.get('OpcionA', 'No aplica')}
+- Opción B: {fila.get('OpcionB', 'No aplica')}
+- Opción C: {fila.get('OpcionC', 'No aplica')}
+- Opción D: {fila.get('OpcionD', 'No aplica')}
 
 📝 INSTRUCCIONES PARA EL ANÁLISIS DEL ÍTEM
 Genera el análisis del ítem siguiendo estas reglas y en el orden exacto solicitado:
 
 ### 1. Qué Evalúa
-**Regla de Oro:** La descripción debe ser una síntesis directa y precisa de la taxonomía del ítem.
+**Regla de Oro:** La descripción debe ser una síntesis directa y precisa de la taxonomía del ítem teniendo en cuenta lo que el ítem evalúa.
 - Redacta una única frase (máximo 2 renglones) que comience obligatoriamente con "Este ítem evalúa la capacidad del estudiante para...".
 - La frase debe construirse usando la **Evidencia de Aprendizaje** como núcleo de la habilidad y la **Competencia** como el marco general.
 - **Prohibido** referirse al contenido o a los personajes del texto. El foco es 100% en el proceso cognitivo definido por la taxonomía.
 
 ### 2. Ruta Cognitiva Correcta
-Describe, en un párrafo continuo y de forma impersonal, el procedimiento mental que un estudiante debe ejecutar para llegar a la respuesta correcta.
-- Debes articular la ruta usando **verbos que representen procesos cognitivos** (ej: identificar, relacionar, inferir, comparar, evaluar) para mostrar la secuencia de pensamiento de manera explícita.
+- Describe, en un párrafo continuo y de forma impersonal, el procedimiento mental que un estudiante debe ejecutar para llegar a la respuesta correcta.
+- Debes articular la ruta usando **verbos que representen procesos cognitivos** (ej: identificar, relacionar, inferir, comparar, evaluar) para mostrar la secuencia lógica de pensamiento de manera explícita.
 - El último paso de la ruta debe ser la justificación final de por qué la alternativa clave es la única respuesta válida, conectando el razonamiento con la selección de esa opción.
+- Los verbos de los procesos cognitivos deben tener relación con la compentecia, evidencia de aprendizaje, y aprendizaje priorizado.
 
 ### 3. Análisis de Opciones No Válidas (Distractores)
 Para cada una de las TRES opciones incorrectas, realiza un análisis del error.
-- Primero, identifica la **naturaleza de la confusión** (ej: es una lectura literal cuando se pide inferir, una sobregeneralización, una interpretación de un detalle irrelevante pero llamativo, una opinión personal no sustentada en el texto, etc.).
+- Primero, identifica la **naturaleza del error** (ej: es una lectura literal cuando se pide inferir, una sobregeneralización, una interpretación de un detalle irrelevante pero llamativo, una opinión personal no sustentada en el texto, etc.).
 - Luego, explica el posible razonamiento que lleva al estudiante a cometer ese error.
 - Finalmente, clarifica por qué esa opción es incorrecta en el contexto de la tarea evaluativa.
 
@@ -136,15 +143,13 @@ Para cada una de las TRES opciones incorrectas, realiza un análisis del error.
 **REGLA CRÍTICA:** Responde únicamente con el texto solicitado y en la estructura definida a continuación. Es crucial que los tres títulos aparezcan en la respuesta, en el orden correcto y sin texto introductorio, de cierre o conclusiones.
 
 Qué Evalúa:
-Este ítem evalúa la capacidad del estudiante para [síntesis de la taxonomía, centrada en la Evidencia de Aprendizaje].
+Este ítem evalúa la capacidad del estudiante para [síntesis de la taxonomía, centrada en la Evidencia de Aprendizaje, aprendizaje priorizado y lo que hace para responder el ítem].
 
 Ruta Cognitiva Correcta:
 Para resolver correctamente este ítem, el estudiante primero debe [verbo cognitivo 1]... Luego, necesita [verbo cognitivo 2]... Este proceso le permite [verbo cognitivo 3]..., lo que finalmente lo lleva a concluir que la opción [letra de la respuesta correcta] es la correcta porque [justificación final].
 
 Análisis de Opciones No Válidas:
 - **Opción [Letra del distractor]:** El estudiante podría escoger esta opción si comete un error de [naturaleza de la confusión], lo que lo lleva a pensar que [razonamiento erróneo]. Sin embargo, esto es incorrecto porque [razón clara y concisa].
-- **Opción [Letra del distractor]:** La elección de esta alternativa sugiere una falla en [naturaleza de la confusión]. El estudiante posiblemente cree que [razonamiento erróneo], pero la opción es inválida debido a que [razón clara y concisa].
-- **Opción [Letra del distractor]:** Esta opción funciona como un distractor para quien [naturaleza de la confusión], interpretando erróneamente que [razonamiento erróneo]. Es incorrecta puesto que [razón clara y concisa].
 """
 
 def construir_prompt_recomendaciones(fila):
@@ -153,9 +158,9 @@ def construir_prompt_recomendaciones(fila):
     return f"""
 🎯 ROL DEL SISTEMA
 Eres un diseñador instruccional experto en evaluación, especializado en crear material pedagógico de alto valor. Tu misión es generar dos recomendaciones **novedosas, creativas e inspiradoras** (Fortalecer y Avanzar) que cumplan de manera inviolable las siguientes directrices:
-1.  **FIDELIDAD A LA TAXONOMÍA:** Toda recomendación debe originarse y alinearse estrictamente con la jerarquía cognitiva definida por la **Competencia, el Aprendizaje y la Evidencia**.
-2.  **CERO PRODUCCIÓN ESCRITA:** Existe una prohibición total de actividades que impliquen escritura. La interacción del estudiante debe ser exclusivamente **oral**, de **selección** o de **organización**.
-3.  **GENERALIDAD DEL CONTENIDO:** Las actividades deben ser aplicables a textos generales y NUNCA deben basarse en el contenido específico del ítem de entrada.
+1.  **FIDELIDAD A LA TAXONOMÍA:** Toda recomendación debe originarse y alinearse estrictamente con la jerarquía cognitiva definida por la **Competencia, el Aprendizaje priorizado y la Evidencia**.
+2.  **CERO PRODUCCIÓN ESCRITA:** Existe una prohibición total de actividades que impliquen escritura y producción. Debe estar centrado en procesos de lectura*.
+3.  **GENERALIDAD DEL CONTENIDO:** Las actividades deben ser aplicables a textos generales y NO deben basarse en el contenido específico del ítem de entrada.
 4.  **REDACCIÓN IMPERSONAL:** Todo el texto generado debe mantener un tono profesional e impersonal.
 
 🧠 INSUMOS DE ENTRADA
@@ -167,18 +172,25 @@ Eres un diseñador instruccional experto en evaluación, especializado en crear 
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
 - Tipología Textual (Solo para Lectura Crítica): {fila.get('Tipologia Textual', 'No aplica')}
 - Grado Escolar: {fila.get('ItemGradoId', '')}
+- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
+- Opción A: {fila.get('OpcionA', 'No aplica')}
+- Opción B: {fila.get('OpcionB', 'No aplica')}
+- Opción C: {fila.get('OpcionC', 'No aplica')}
+- Opción D: {fila.get('OpcionD', 'No aplica')}
 
 📝 INSTRUCCIONES PARA GENERAR LAS RECOMENDACIONES
 Genera las dos recomendaciones adhiriéndote estrictamente a lo siguiente:
 
 ### 1. Recomendación para FORTALECER 💪
-- **Objetivo Central:** Andamiar el proceso cognitivo exacto descrito en la **Evidencia de Aprendizaje**.
+- **Identificación de procesos** Identifica los procesos cognitivos (verbos) mas básicos necesarios para poder responder con el ítem de la taxonomia dada.
+- **Objetivo Central:** Andamiar el proceso cognitivo exacto descrito en la competencia, aprendizaje priorizado y evidencia de aprendizaje.
 - **Contexto Pedagógico:** La actividad debe ser un microcosmos de dicha evidencia, pero simplificada. Debes **descomponer el proceso cognitivo en pasos manejables**.
 - **Actividad Propuesta:** Diseña una actividad de lectura, selección u organización oral que sea **novedosa, creativa y lúdica**. **Evita explícitamente ejercicios típicos** como cuestionarios, llenar espacios en blanco o buscar ideas principales de forma tradicional. La actividad debe sentirse como un juego o un pequeño acertijo.
 - **Preguntas Orientadoras:** Formula preguntas que funcionen como un **"paso a paso" del razonamiento**, guiando al estudiante a través del proceso de forma sutil.
 
 ### 2. Recomendación para AVANZAR 🚀
-- **Objetivo Central:** Asegurar una **progresión cognitiva clara y directa** desde la habilidad de Fortalecer.
+- **Identificación de procesos** Identifica los procesos cognitivos (verbos) mas avanzados que permiten que un estudiante avance mas allá sin salir del proceso cognitivo general dado por la competencia.
+- **Objetivo Central:** Asegurar una **progresión cognitiva clara y directa** comparada con la actividad planteada en Fortalecer.
 - **Contexto Pedagógico:** La actividad para Avanzar debe ser la **evolución natural y más compleja de la habilidad trabajada en Fortalecer**. La conexión entre ambas debe ser explícita y lógica.
 - **Actividad Propuesta:** Diseña un desafío intelectual de lectura, análisis comparativo u oral que sea **estimulante y poco convencional**. La actividad debe promover el pensamiento crítico y la transferencia de habilidades de una manera que no sea habitual en el aula.
 - **Preguntas Orientadoras:** Formula preguntas abiertas que exijan **evaluación, síntesis, aplicación o metacognición**, demostrando un salto cualitativo respecto a las preguntas de Fortalecer.
