@@ -122,7 +122,7 @@ Eres un experto psicómetra y pedagogo, especializado en la deconstrucción cogn
 Genera el análisis del ítem siguiendo estas reglas y en el orden exacto solicitado:
 
 ### 1. Qué Evalúa
-**Regla de Oro:** La descripción debe ser una síntesis directa y precisa de la taxonomía del ítem teniendo en cuenta lo que el ítem evalúa.
+**Regla de Oro:** La descripción debe ser una síntesis directa y precisa de la taxonomía del ítem teniendo en cuenta los procesos para responder el ítem pero NO información del ítem.
 - Redacta una única frase (máximo 2 renglones) que comience obligatoriamente con "Este ítem evalúa la capacidad del estudiante para...".
 - La frase debe construirse usando la **Evidencia de Aprendizaje** como núcleo de la habilidad y la **Competencia** como el marco general.
 - **Prohibido** referirse al contenido o a los personajes del texto. El foco es 100% en el proceso cognitivo definido por la taxonomía.
