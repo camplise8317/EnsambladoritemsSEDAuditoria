@@ -27,8 +27,8 @@ def limpiar_html(texto_html):
     return texto_limpio
 
 # --- Funciones de Configuración de Modelos ---
+# Función para configurar el modelo Gemini
 def setup_gemini_model(api_key):
-    """Configura y retorna un cliente para el modelo Gemini."""
     try:
         genai.configure(api_key=api_key)
         generation_config = {
@@ -49,6 +49,7 @@ def setup_gemini_model(api_key):
     except Exception as e:
         st.error(f"Error al configurar la API de Google: {e}")
         return None
+
 
 def setup_openai_model(api_key):
     """Configura y retorna un cliente para los modelos de OpenAI."""
