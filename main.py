@@ -219,20 +219,8 @@ ANÁLISIS DE LA RUTA COGNITIVA:
 
 TAXONOMÍA DE REFERENCIA:
 - Competencia: {fila.get('CompetenciaNombre', '')}
-- Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
-
-🧠 OTROS INSUMOS DE ENTRADA
-- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
-- Descripción del Ítem: {fila.get('ItemEnunciado', 'No aplica')}
-- Grado Escolar: {fila.get('ItemGradoId', '')}
-- Análisis de Errores Comunes: {fila.get('Analisis_Errores', 'No aplica')}
-- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
-- Opción A: {fila.get('OpcionA', 'No aplica')}
-- Opción B: {fila.get('OpcionB', 'No aplica')}
-- Opción C: {fila.get('OpcionC', 'No aplica')}
-- Opción D: {fila.get('OpcionD', 'No aplica')}
 
 📝 INSTRUCCIONES
 Basándote **exclusivamente** en el ANÁLISIS DE LA RUTA COGNITIVA, redacta una única frase (máximo 2 renglones) que resuma la habilidad principal que se está evaluando.
