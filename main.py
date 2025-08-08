@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
+
 import streamlit as st
 import pandas as pd
 from docxtpl import DocxTemplate
 import google.generativeai as genai
-import openai
 import os
 import re
 import time
@@ -11,8 +12,8 @@ from io import BytesIO
 
 # --- CONFIGURACIÓN DE LA PÁGINA DE STREAMLIT ---
 st.set_page_config(
-    page_title="Ensamblador de Fichas con Auditoría IA",
-    page_icon="🤖✅",
+    page_title="Ensamblador de Fichas Técnicas con IA",
+    page_icon="🤖",
     layout="wide"
 )
 
@@ -26,19 +27,18 @@ def limpiar_html(texto_html):
     texto_limpio = re.sub(cleanr, '', texto_html)
     return texto_limpio
 
-# --- Funciones de Configuración de Modelos ---
-# Función para configurar el modelo Gemini
-def setup_gemini_model(api_key):
+def setup_model(api_key):
+    """Configura y retorna el cliente para el modelo Gemini."""
     try:
         genai.configure(api_key=api_key)
         generation_config = {
             "temperature": 0.6, "top_p": 1, "top_k": 1, "max_output_tokens": 8192
         }
         safety_settings = [
-            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
-            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_MEDIUM_AND_ABOVE"},
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_ONLY_HIGH"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_ONLY_HIGH"},
         ]
         model = genai.GenerativeModel(
             model_name="gemini-1.5-pro-latest",
@@ -50,47 +50,95 @@ def setup_gemini_model(api_key):
         st.error(f"Error al configurar la API de Google: {e}")
         return None
 
+# --- EJEMPLOS DE ALTA CALIDAD (FEW-SHOT PROMPTING) ---
 
-def setup_openai_model(api_key):
-    """Configura y retorna un cliente para los modelos de OpenAI."""
-    try:
-        client = openai.OpenAI(api_key=api_key)
-        client.models.list()  # Verifica que la clave funciona
-        return client
-    except openai.AuthenticationError:
-        st.error("Clave API de OpenAI inválida o incorrecta.")
-        return None
-    except Exception as e:
-        st.error(f"Error al configurar la API de OpenAI: {e}")
-        return None
+EJEMPLOS_ANALISIS_PREMIUM = """
+A continuación, te muestro ejemplos de análisis de la más alta calidad. Tu respuesta debe seguir este mismo estilo, tono y nivel de detalle.
 
-# --- Función Unificada de Generación ---
-def generar_contenido(modelo_cliente, nombre_modelo_api, prompt):
-    """Genera contenido usando el cliente y nombre de modelo apropiado."""
-    try:
-        if isinstance(modelo_cliente, genai.GenerativeModel):
-            response = modelo_cliente.generate_content(prompt)
-            # Asegurarse de que la respuesta tenga texto antes de devolverla
-            return response.text.strip() if hasattr(response, 'text') and response.text else ""
-        elif isinstance(modelo_cliente, openai.OpenAI):
-            chat_completion = modelo_cliente.chat.completions.create(
-                messages=[
-                    {"role": "system", "content": "Eres un asistente experto en pedagogía y evaluación educativa."},
-                    {"role": "user", "content": prompt},
-                ],
-                model=nombre_modelo_api,
-                temperature=0.6,
-            )
-            return chat_completion.choices[0].message.content.strip()
-    except Exception as e:
-        st.warning(f"Error durante la generación de contenido: {e}")
-        time.sleep(3) # Pausa por si es un error de rate limit
-        return f"ERROR API: {str(e)}"
+### EJEMPLO 1: LECTURA LITERAL (TEXTO NARRATIVO) ###
+**INSUMOS:**
+- Competencia: Comprensión de textos
+- Componente: Lectura literal
+- Evidencia: Reconoce información específica en el texto.
+- Enunciado: Los personajes del cuento son:
+- Opciones: A: "Un hombre, un hombrecito y alguien que sostiene unas pinzas.", B: "Un narrador, un hombre y un hombrecito.", C: Un hombrecito y alguien que sostiene unas pinzas., D: Un hombre y el narrador.
 
-# --- Funciones de Construcción de Prompts ---
+**RESULTADO ESPERADO:**
+Ruta Cognitiva Correcta:
+Para responder el ítem, el estudiante debe leer el cuento prestando atención a las entidades que realizan acciones o a quienes les suceden eventos en el texto. En el tercer párrafo, se menciona a "un hombre" que armó el barquito y a un "hombrecito diminuto" dentro de la botella. En el último párrafo, se describe que un "ojo enorme lo atisbaba desde fuera" al primer hombre y que "unas enormes pinzas que avanzaban hacia él". Este "ojo enorme" y las "enormes pinzas" implican la existencia de un tercer personaje, un ser que se encuentra mirando al primer personaje. El estudiante debe identificar a todos estos personajes que interactúan o son afectados por la trama.
 
-def construir_prompt_analisis(fila):
-    """Construye el prompt para el análisis del ítem."""
+Análisis de Opciones No Válidas:
+- **Opción B:** No es correcta porque, en este cuento, el "narrador" es la voz que cuenta la historia, no un personaje que participe en los eventos del cuento. El relato está escrito en tercera persona y el narrador se mantiene fuera de la acción.
+- **Opción C:** No es correcta porque omite al primer personaje introducido y central en la trama: "un hombre" que construye el barquito y observa al "hombrecito". Sin este personaje, la secuencia de eventos no se establece.
+- **Opción D:** No es correcta porque, al igual que la opción B, incluye al "narrador" como personaje, lo cual es incorrecto. Además, omite al "hombrecito" y al ser con "unas pinzas", reduciendo el número de personajes activos en la historia.
+
+### EJEMPLO 2: LECTURA INFERENCIAL (TEXTO NARRATIVO-INFORMATIVO) ###
+**INSUMOS:**
+- Competencia: Comprensión de textos
+- Componente: Lectura inferencial
+- Evidencia: Integra y compara diferentes partes del texto y analiza la estructura para hacer inferencias.
+- Enunciado: Lee el siguiente fragmento del texto: “Los manglares están muriendo, por lo que el desequilibrio es cada vez mayor. La carretera lo cambió todo. Para construirla arrasaron veinte mil hectáreas de manglar...”. ¿Qué función cumple la parte subrayada dentro del fragmento?
+- Opciones: A: Señalar la causa de un problema medioambiental., B: Establecer una comparación entre dos acciones de un proceso., C: Mostrar la consecuencia del daño medioambiental., D: Explicar el motivo por el que se decidió realizar una acción.
+
+**RESULTADO ESPERADO:**
+Ruta Cognitiva Correcta:
+El estudiante debe comprender el contenido del fragmento y la estructura global del texto, para luego identificar cuál es la función que cumple dentro de esta. En este caso específico, el estudiante debe comprender que el fragmento señala la principal causa que ha llevado al desequilibrio del ecosistema de los manglares en la zona, y que este fragmento del texto justamente cumple con la función de señalar esa causa.
+
+Análisis de Opciones No Válidas:
+- **Opción B:** Es incorrecta porque la pregunta busca la causa del problema, no la comparación de acciones.
+- **Opción C:** Es incorrecta porque el estudiante confunde la causa con la consecuencia del problema medioambiental. Identifica un efecto del problema, pero no su origen.
+- **Opción D:** Es incorrecta porque se centra en la motivación detrás de una acción, en lugar de la causa del problema en sí mismo. La pregunta busca el origen del problema medioambiental.
+
+### EJEMPLO 3: LECTURA CRÍTICA (TEXTO NARRATIVO-INFORMATIVO) ###
+**INSUMOS:**
+- Competencia: Comprensión de textos
+- Componente: Lectura crítica
+- Evidencia: Evalúa la credibilidad, confiabilidad y objetividad del texto, emitiendo juicios críticos sobre la información.
+- Enunciado: ¿Por qué el autor cita el testimonio de Jesús Suárez en el texto?
+- Opciones: A: Porque es el vocero que la comunidad palafítica ha designado., B: Porque es causante de la situación que ocurre en la población., C: Porque al ser experto en ecosistemas acuáticos su opinión es confiable., D: Porque al ser investigador puede verificar lo dicho por otro testigo de los hechos.
+
+**RESULTADO ESPERADO:**
+Ruta Cognitiva Correcta:
+El estudiante analiza las opciones presentadas considerando la relación entre la justificación dada y la confiabilidad de la fuente. Evalúa la opción C y reconoce que la experticia en ecosistemas acuáticos otorga mayor credibilidad a la opinión de un individuo sobre una situación relacionada con este tema. Justifica la selección de la opción C al contrastarla con las demás opciones, considerando la relevancia de la experticia para la situación planteada.
+
+Análisis de Opciones No Válidas:
+- **Opción A:** Es incorrecta porque ser vocero no implica necesariamente tener el conocimiento experto para opinar sobre situaciones específicas.
+- **Opción B:** Es incorrecta porque ser causante de un problema no implica tener el conocimiento o la imparcialidad para analizarlo y ofrecer una opinión confiable.
+- **Opción D:** Es incorrecta porque la verificación de un testimonio en este contexto requiere una experticia específica en el tema, que en este caso es ecosistemas acuáticos.
+"""
+
+EJEMPLOS_RECOMENDACIONES_PREMIUM = """
+A continuación, te muestro ejemplos de recomendaciones pedagógicas de la más alta calidad. Tu respuesta debe seguir este mismo estilo, estructura y enfoque creativo.
+
+### EJEMPLO 1 DE RECOMENDACIONES PERFECTAS (TEXTO DISCONTINUO) ###
+**INSUMOS:**
+- Qué Evalúa el Ítem: El ítem evalúa la habilidad del estudiante para relacionar diferentes elementos del contenido e identificar nueva información en textos no literarios.
+- Evidencia: Relaciona diferentes partes del texto para hacer inferencias sobre significados o sobre el propósito general.
+
+**RESULTADO ESPERADO:**
+RECOMENDACIÓN PARA FORTALECER EL APRENDIZAJE EVALUADO EN EL ÍTEM
+Para reforzar la habilidad de vincular diferentes elementos del contenido y descubrir nuevas ideas, se sugiere la realización de actividades que impliquen el análisis de textos no literarios de carácter discontinuo como infografías. Los estudiantes podrían empezar por leer estas fuentes y marcar los datos que consideren relevantes. Posteriormente, en un esfuerzo colectivo, podrían construir un mapa conceptual que refleje la relación entre los diferentes datos resaltados. Finalmente, podrían trabajar en la identificación de las ideas principales y secundarias que emergen de este mapa, lo que les permitirá tener una comprensión más profunda del texto.
+
+RECOMENDACIÓN PARA AVANZAR EN EL APRENDIZAJE EVALUADO EN EL ÍTEM
+Para consolidar la capacidad de identificar las funciones de los diferentes elementos que componen un texto no literario de carácter discontinuo, se sugiere fomentar la práctica de reorganizar textos desordenados. Los estudiantes pueden recibir fragmentos de una infografía que deben arreglar en el orden correcto, identificando la introducción, el desarrollo y la conclusión. Durante esta actividad, se pueden formular preguntas como: ¿Cuál fragmento introduce el tema? ¿Qué información proporciona esta imagen o gráfico? ¿Cómo se relaciona con el texto?
+
+### EJEMPLO 2 DE RECOMENDACIONES PERFECTAS (TEXTO INFORMATIVO) ###
+**INSUMOS:**
+- Qué Evalúa el Ítem: Este ítem evalúa la capacidad del estudiante para hacer una inferencia integrando información implícita presente en una parte del texto.
+- Evidencia: Integra y compara diferentes partes del texto y analiza la estructura para hacer inferencias.
+
+**RESULTADO ESPERADO:**
+RECOMENDACIÓN PARA FORTALECER EL APRENDIZAJE EVALUADO EN EL ÍTEM
+Para fortalecer la habilidad de hacer inferencias a partir de un segmento de un texto informativo, se sugiere implementar una dinámica de "lectura de pistas". Esta estrategia se enfoca en que los estudiantes identifiquen información implícita en fragmentos textuales cortos para inferir contextos o emociones que no se mencionan directamente. El docente puede presentar al grupo tres o cuatro fragmentos muy breves y evocadores (de noticias o crónicas) que insinúen una situación sin describirla por completo. Por ejemplo: "El teléfono sonó por décima vez. Al otro lado de la línea, solo se oía una respiración agitada. Afuera, la sirena de una ambulancia se acercaba". Los estudiantes, en parejas, leen el fragmento y discuten qué pueden deducir de la escena. Las preguntas orientadoras pueden ser: ¿Qué pistas te da el texto sobre el estado de ánimo de la persona?, ¿Qué crees que pasó justo antes de la escena descrita?
+
+RECOMENDACIÓN PARA AVANZAR EN EL APRENDIZAJE EVALUADO EN EL ÍTEM
+Para avanzar en la habilidad de hacer inferencias complejas a partir de la comparación de diferentes partes de un texto, se sugiere proponer un análisis de perspectivas múltiples dentro de una misma crónica o texto informativo. El objetivo es que los estudiantes superen la inferencia local y aprendan a contrastar voces, datos o argumentos presentados en un mismo relato. El docente puede seleccionar una crónica periodística sobre un tema urbano actual que incluya las voces de distintos actores sociales (un vendedor, un residente, un funcionario). Los estudiantes deben leer el texto e identificar y comparar las diferentes posturas frente al mismo hecho. Las preguntas orientadoras pueden ser: ¿Qué similitudes y diferencias encuentras entre las perspectivas?, ¿Qué visión del problema se formaría un lector si el texto solo hubiera incluido una de estas voces?
+"""
+
+# --- FUNCIONES DE PROMPTS SECUENCIALES ---
+
+def construir_prompt_paso1_analisis_central(fila):
+    """Paso 1: Genera la Ruta Cognitiva y el Análisis de Distractores, guiado por ejemplos."""
     fila = fila.fillna('')
     descripcion_item = (
         f"Enunciado: {fila.get('Enunciado', '')}\n"
@@ -102,226 +150,163 @@ def construir_prompt_analisis(fila):
     )
     return f"""
 🎯 ROL DEL SISTEMA
-Eres un experto psicómetra y pedagogo, especializado en la deconstrucción cognitiva de ítems de evaluación de lectura. Tu misión es realizar un análisis tripartito y riguroso de un ítem, explicando qué evalúa, cómo se resuelve correctamente y por qué las opciones incorrectas (distractores) son atractivas para un estudiante que comete un error específico de razonamiento.
+Eres un experto psicómetra y pedagogo. Tu misión es deconstruir un ítem de evaluación siguiendo el estilo y la calidad de los ejemplos proporcionados.
 
-🧠 INSUMOS DE ENTRADA
-- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
+{EJEMPLOS_ANALISIS_PREMIUM}
+
+🧠 INSUMOS DE ENTRADA (Para el nuevo ítem que debes analizar):
 - Descripción del Ítem: {descripcion_item}
 - Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Competencia: {fila.get('CompetenciaNombre', '')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
-- Grado Escolar: {fila.get('ItemGradoId', '')}
-- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
-- Opción A: {fila.get('OpcionA', 'No aplica')}
-- Opción B: {fila.get('OpcionB', 'No aplica')}
-- Opción C: {fila.get('OpcionC', 'No aplica')}
-- Opción D: {fila.get('OpcionD', 'No aplica')}
 
-📝 INSTRUCCIONES PARA EL ANÁLISIS DEL ÍTEM
-Genera el análisis del ítem siguiendo estas reglas y en el orden exacto solicitado:
+📝 INSTRUCCIONES
+Basándote en los ejemplos de alta calidad y los nuevos insumos, realiza el siguiente proceso en dos fases:
 
-### 1. Qué Evalúa
-**Regla de Oro:** La descripción debe ser una síntesis directa y precisa de la taxonomía del ítem teniendo en cuenta los procesos para responder el ítem pero NO información del ítem.
-- Redacta una única frase (máximo 2 renglones) que comience obligatoriamente con "Este ítem evalúa la capacidad del estudiante para...".
-- La frase debe construirse usando la **Evidencia de Aprendizaje** como núcleo de la habilidad y la **Competencia** como el marco general.
-- **Prohibido** referirse al contenido o a los personajes del texto. El foco es 100% en el proceso cognitivo definido por la taxonomía.
+FASE 1: RUTA COGNITIVA
+1.  **Genera la Ruta Cognitiva:** Describe el paso a paso mental y lógico que un estudiante debe seguir para llegar a la respuesta correcta. Usa verbos que representen procesos cognitivos.
+2.  **Auto-Verificación:** Revisa que la ruta se alinee con la Competencia ('{fila.get('CompetenciaNombre', '')}') y la Evidencia ('{fila.get('EvidenciaNombre', '')}').
+3.  **Justificación Final:** El último paso debe justificar la elección de la respuesta correcta.
 
-### 2. Ruta Cognitiva Correcta
-- Describe, en un párrafo continuo y de forma impersonal, el procedimiento mental que un estudiante debe ejecutar para llegar a la respuesta correcta.
-- Debes articular la ruta usando **verbos que representen procesos cognitivos** (ej: identificar, relacionar, inferir, comparar, evaluar) para mostrar la secuencia lógica de pensamiento de manera explícita.
-- El último paso de la ruta debe ser la justificación final de por qué la alternativa clave es la única respuesta válida, conectando el razonamiento con la selección de esa opción.
-- Los verbos de los procesos cognitivos deben tener relación con la compentecia, evidencia de aprendizaje, y aprendizaje priorizado.
+FASE 2: ANÁLISIS DE OPCIONES NO VÁLIDAS
+- Para cada opción incorrecta, identifica la naturaleza del error y explica el razonamiento fallido.
 
-### 3. Análisis de Opciones No Válidas (Distractores)
-Para cada una de las TRES opciones incorrectas, realiza un análisis del error.
-- Primero, identifica la **naturaleza del error** (ej: es una lectura literal cuando se pide inferir, una sobregeneralización, una interpretación de un detalle irrelevante pero llamativo, una opinión personal no sustentada en el texto, etc.).
-- Luego, explica el posible razonamiento que lleva al estudiante a cometer ese error.
-- Finalmente, clarifica por qué esa opción es incorrecta en el contexto de la tarea evaluativa.
-
-✍️ FORMATO DE SALIDA DEL ANÁLISIS
-**REGLA CRÍTICA:** Responde únicamente con el texto solicitado y en la estructura definida a continuación. Es crucial que los tres títulos aparezcan en la respuesta, en el orden correcto y sin texto introductorio, de cierre o conclusiones.
-
-Qué Evalúa:
-Este ítem evalúa la capacidad del estudiante para [síntesis de la taxonomía, centrada en la Evidencia de Aprendizaje, aprendizaje priorizado y lo que hace para responder el ítem].
+✍️ FORMATO DE SALIDA
+**REGLA CRÍTICA:** Responde únicamente con los dos títulos siguientes, en este orden y sin añadir texto adicional.
 
 Ruta Cognitiva Correcta:
-Para resolver correctamente este ítem, el estudiante primero debe [verbo cognitivo 1]... Luego, necesita [verbo cognitivo 2]... Este proceso le permite [verbo cognitivo 3]..., lo que finalmente lo lleva a concluir que la opción [letra de la respuesta correcta] es la correcta porque [justificación final].
+[Párrafo continuo y detallado.]
 
 Análisis de Opciones No Válidas:
-- **Opción [Letra del distractor]:** El estudiante podría escoger esta opción si comete un error de [naturaleza de la confusión], lo que lo lleva a pensar que [razonamiento erróneo]. Sin embargo, esto es incorrecto porque [razón clara y concisa].
+- **Opción [Letra]:** [Análisis del error...]
+- **Opción [Letra]:** [Análisis del error...]
+- **Opción [Letra]:** [Análisis del error...]
 """
 
-def construir_prompt_recomendaciones(fila):
-    """Construye el prompt para las recomendaciones pedagógicas."""
+def construir_prompt_paso2_sintesis_que_evalua(analisis_central_generado, fila):
+    """Paso 2: Sintetiza el "Qué Evalúa" a partir del análisis central."""
     fila = fila.fillna('')
+    try:
+        header_distractores = "Análisis de Opciones No Válidas:"
+        idx_distractores = analisis_central_generado.find(header_distractores)
+        ruta_cognitiva_texto = analisis_central_generado[:idx_distractores].strip() if idx_distractores != -1 else analisis_central_generado
+    except:
+        ruta_cognitiva_texto = analisis_central_generado
+
     return f"""
 🎯 ROL DEL SISTEMA
-Eres un diseñador instruccional experto en evaluación, especializado en crear material pedagógico de alto valor. Tu misión es generar dos recomendaciones **novedosas, creativas e inspiradoras** (Fortalecer y Avanzar) que cumplan de manera inviolable las siguientes directrices:
-1.  **FIDELIDAD A LA TAXONOMÍA:** Toda recomendación debe originarse y alinearse estrictamente con la jerarquía cognitiva definida por la **Competencia, el Aprendizaje priorizado y la Evidencia**.
-2.  **CERO PRODUCCIÓN ESCRITA:** Existe una prohibición total de actividades que impliquen escritura y producción. Debe estar centrado en procesos de lectura*.
-3.  **GENERALIDAD DEL CONTENIDO:** Las actividades deben ser aplicables a textos generales y NO deben basarse en el contenido específico del ítem de entrada.
-4.  **REDACCIÓN IMPERSONAL:** Todo el texto generado debe mantener un tono profesional e impersonal.
+Eres un experto en evaluación que sintetiza análisis complejos en una sola frase concisa.
 
 🧠 INSUMOS DE ENTRADA
-- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
-- Descripción del Ítem: {fila.get('ItemEnunciado', 'No aplica')}
-- Componente: {fila.get('ComponenteNombre', 'No aplica')}
+A continuación, te proporciono un análisis detallado de la ruta cognitiva necesaria para resolver un ítem.
+
+ANÁLISIS DE LA RUTA COGNITIVA:
+---
+{ruta_cognitiva_texto}
+---
+
+TAXONOMÍA DE REFERENCIA:
 - Competencia: {fila.get('CompetenciaNombre', '')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
-- Tipología Textual (Solo para Lectura Crítica): {fila.get('Tipologia Textual', 'No aplica')}
-- Grado Escolar: {fila.get('ItemGradoId', '')}
-- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
-- Opción A: {fila.get('OpcionA', 'No aplica')}
-- Opción B: {fila.get('OpcionB', 'No aplica')}
-- Opción C: {fila.get('OpcionC', 'No aplica')}
-- Opción D: {fila.get('OpcionD', 'No aplica')}
 
-📝 INSTRUCCIONES PARA GENERAR LAS RECOMENDACIONES
-Genera las dos recomendaciones adhiriéndote estrictamente a lo siguiente:
+📝 INSTRUCCIONES
+Basándote **exclusivamente** en el ANÁLISIS DE LA RUTA COGNITIVA, redacta una única frase (máximo 2 renglones) que resuma la habilidad principal que se está evaluando.
+- **Regla 1:** La frase debe comenzar obligatoriamente con "Este ítem evalúa la capacidad del estudiante para...".
+- **Regla 2:** La frase debe describir los **procesos cognitivos**, no el contenido del texto o del ítem.
+- **Regla 3:** Utiliza la TAXONOMÍA DE REFERENCIA para asegurar que el lenguaje sea preciso y alineado.
 
-### 1. Recomendación para FORTALECER 💪
-- **Identificación de procesos** Identifica los procesos cognitivos (verbos) mas básicos necesarios para poder responder con el ítem de la taxonomia dada.
-- **Objetivo Central:** Andamiar el proceso cognitivo exacto descrito en la competencia, aprendizaje priorizado y evidencia de aprendizaje.
-- **Contexto Pedagógico:** La actividad debe ser un microcosmos de dicha evidencia, pero simplificada. Debes **descomponer el proceso cognitivo en pasos manejables**.
-- **Actividad Propuesta:** Diseña una actividad de lectura, selección u organización oral que sea **novedosa, creativa y lúdica**. **Evita explícitamente ejercicios típicos** como cuestionarios, llenar espacios en blanco o buscar ideas principales de forma tradicional. La actividad debe sentirse como un juego o un pequeño acertijo.
-- **Preguntas Orientadoras:** Formula preguntas que funcionen como un **"paso a paso" del razonamiento**, guiando al estudiante a través del proceso de forma sutil.
-
-### 2. Recomendación para AVANZAR 🚀
-- **Identificación de procesos** Identifica los procesos cognitivos (verbos) mas avanzados que permiten que un estudiante avance mas allá sin salir del proceso cognitivo general dado por la competencia.
-- **Objetivo Central:** Asegurar una **progresión cognitiva clara y directa** comparada con la actividad planteada en Fortalecer.
-- **Contexto Pedagógico:** La actividad para Avanzar debe ser la **evolución natural y más compleja de la habilidad trabajada en Fortalecer**. La conexión entre ambas debe ser explícita y lógica.
-- **Actividad Propuesta:** Diseña un desafío intelectual de lectura, análisis comparativo u oral que sea **estimulante y poco convencional**. La actividad debe promover el pensamiento crítico y la transferencia de habilidades de una manera que no sea habitual en el aula.
-- **Preguntas Orientadoras:** Formula preguntas abiertas que exijan **evaluación, síntesis, aplicación o metacognición**, demostrando un salto cualitativo respecto a las preguntas de Fortalecer.
-
-✍️ FORMATO DE SALIDA DE LAS RECOMENDACIONES
-**IMPORTANTE: Responde de forma directa, usando obligatoriamente la siguiente estructura. No añadas texto adicional.**
-- **Redacción Impersonal:** Utiliza siempre una redacción profesional e impersonal (ej. "se sugiere", "la tarea consiste en", "se entregan tarjetas").
-- **Sin Conclusiones:** Termina directamente con la lista de preguntas.
-
-RECOMENDACIÓN PARA FORTALECER EL APRENDIZAJE EVALUADO EN EL ÍTEM
-Para fortalecer la habilidad de [verbo clave extraído de la Evidencia de Aprendizaje], se sugiere [descripción de la estrategia de andamiaje para ese proceso exacto].
-Una actividad que se puede hacer es: [Descripción detallada de la actividad novedosa y creativa, que no implica escritura].
-Las preguntas orientadoras para esta actividad, entre otras, pueden ser:
-- [Pregunta 1: Que guíe el primer paso del proceso cognitivo]
-- [Pregunta 2: Que ayude a analizar un componente clave del proceso]
-- [Pregunta 3: Que conduzca a la conclusión del proceso base]
-
-RECOMENDACIÓN PARA AVANZAR EN EL APRENDIZAJE EVALUADO EN EL ÍTEM
-Para avanzar desde [proceso cognitivo de Fortalecer] hacia la habilidad de [verbo clave del proceso cognitivo superior], se sugiere [descripción de la estrategia de complejización].
-Una actividad que se puede hacer es: [Descripción detallada de la actividad estimulante y poco convencional, que no implique escritura].
-Las preguntas orientadoras para esta actividad, entre otras, pueden ser:
-- [Pregunta 1: De análisis o evaluación que requiera un razonamiento más profundo]
-- [Pregunta 2: De aplicación, comparación o transferencia a un nuevo contexto]
-- [Pregunta 3: De metacognición o pensamiento crítico sobre el proceso completo]
+✍️ FORMATO DE SALIDA
+Responde únicamente con la frase solicitada, sin el título "Qué Evalúa".
 """
 
-def construir_prompt_auditoria(prompt_original, texto_generado):
-    """Construye el prompt para el modelo auditor."""
+def construir_prompt_paso3_recomendaciones(que_evalua_sintetizado, analisis_central_generado, fila):
+    """Paso 3: Genera las recomendaciones, guiado por ejemplos."""
+    fila = fila.fillna('')
     return f"""
 🎯 ROL DEL SISTEMA
-Eres un auditor de calidad experto en evaluación pedagógica. Tu misión es revisar de forma crítica un texto generado por otra IA para asegurar que cumple al 100% con las instrucciones del prompt original. Eres estricto, preciso y tu objetivo es la excelencia.
+Eres un diseñador instruccional experto, especializado en crear actividades de lectura novedosas, siguiendo el estándar de los ejemplos provistos.
 
-📝 INSTRUCCIONES DEL PROMPT ORIGINAL (PARA TU REFERENCIA):
----
-{prompt_original}
----
+{EJEMPLOS_RECOMENDACIONES_PREMIUM}
 
-📄 TEXTO GENERADO QUE DEBES AUDITAR:
----
-{texto_generado}
----
+🧠 INSUMOS DE ENTRADA (Para el nuevo ítem):
+- Qué Evalúa el Ítem: {que_evalua_sintetizado}
+- Análisis Detallado del Ítem: {analisis_central_generado}
+- Competencia: {fila.get('CompetenciaNombre', '')}
+- Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
+- Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
 
-✅ TU TAREA DE AUDITORÍA:
-Revisa el "TEXTO GENERADO" y compáralo contra las "INSTRUCCIONES DEL PROMPT ORIGINAL". Responde únicamente con la siguiente estructura. No añadas texto fuera de esta estructura.
+📝 INSTRUCCIONES PARA GENERAR LAS RECOMENDACIONES
+Basándote en los ejemplos de alta calidad y los nuevos insumos, genera dos recomendaciones (Fortalecer y Avanzar) que cumplan con estas reglas inviolables:
+1.  **FIDELIDAD A LA TAXONOMÍA:** Las actividades deben alinearse con el 'Qué Evalúa el Ítem'.
+2.  **CERO PRODUCCIÓN ESCRITA:** Deben ser actividades exclusivas de lectura, selección u organización oral.
+3.  **GENERALIDAD Y CREATIVIDAD:** Las actividades deben ser novedosas, lúdicas, no típicas, y aplicables a textos generales.
+4.  **REDACCIÓN IMPERSONAL.**
 
-VEREDICTO: [APROBADO o REQUIERE REVISIÓN]
+### 1. Recomendación para FORTALECER 💪
+- **Objetivo:** Descomponer el proceso cognitivo descrito en el 'Qué Evalúa' en pasos manejables.
+- **Actividad:** Diseña una actividad-juego simple que sirva de andamio para la habilidad central.
+- **Preguntas:** Formula preguntas que guíen el razonamiento paso a paso.
 
-ANÁLISIS DE CUMPLIMIENTO:
-- Fidelidad a la Taxonomía: [Indica si cumple y por qué, o dónde falla]
-- Cero Producción Escrita: [Confirma si se cumple la regla de no escritura]
-- Novedad y Creatividad: [Evalúa si la actividad es novedosa o un ejercicio típico]
-- Redacción Impersonal: [Verifica si el tono es consistentemente impersonal]
-- Progresión Lógica (si aplica): [Analiza si la progresión Fortalecer/Avanzar es lógica]
+### 2. Recomendación para AVANZAR 🚀
+- **Objetivo:** Crear una progresión cognitiva clara desde Fortalecer, dentro de la misma Competencia.
+- **Actividad:** Diseña un desafío intelectual estimulante y poco convencional.
+- **Preguntas:** Formula preguntas abiertas que exijan evaluación, síntesis o transferencia.
 
-SUGERENCIAS DE MEJORA:
-[Si el VEREDICTO es "REQUIERE REVISIÓN", proporciona sugerencias claras y accionables para que la otra IA corrija el texto. Si es "APROBADO", escribe "Ninguna".]
+✍️ FORMATO DE SALIDA
+**IMPORTANTE:** Usa la siguiente estructura exacta, sin añadir texto adicional.
+
+RECOMENDACIÓN PARA FORTALECER EL APRENDIZAJE EVALUADO EN EL ÍTEM
+[Tu recomendación para Fortalecer aquí]
+
+RECOMENDACIÓN PARA AVANZAR EN EL APRENDIZAJE EVALUADO EN EL ÍTEM
+[Tu recomendación para Avanzar aquí]
 """
 
 # --- INTERFAZ PRINCIPAL DE STREAMLIT ---
-st.title("🤖 Ensamblador de Fichas con Auditoría Cruzada de IA")
-st.markdown("Genera, audita y refina contenido pedagógico para asegurar la máxima calidad.")
 
-# Inicializar session_state para todo
+st.title("🤖 Ensamblador de Fichas Técnicas con IA")
+st.markdown("Una aplicación para enriquecer datos pedagógicos y generar fichas personalizadas.")
+
 if 'df_enriquecido' not in st.session_state:
     st.session_state.df_enriquecido = None
 if 'zip_buffer' not in st.session_state:
     st.session_state.zip_buffer = None
 
-# --- PASO 0: Configuración de APIs ---
-st.sidebar.header("🔑 Configuración de APIs")
-gemini_api_key = st.sidebar.text_input("Ingresa tu Clave API de Google AI (Gemini)", type="password", help="Necesaria si seleccionas Gemini como generador o auditor.")
-openai_api_key = st.sidebar.text_input("Ingresa tu Clave API de OpenAI (GPT)", type="password", help="Necesaria si seleccionas un modelo GPT como generador o auditor.")
+# --- PASO 0: Clave API ---
+st.sidebar.header("🔑 Configuración Obligatoria")
+api_key = st.sidebar.text_input("Ingresa tu Clave API de Google AI (Gemini)", type="password")
 
 # --- PASO 1: Carga de Archivos ---
 st.header("Paso 1: Carga tus Archivos")
 col1, col2 = st.columns(2)
 with col1:
-    archivo_excel = st.file_uploader("Sube tu Excel", type=["xlsx"])
+    archivo_excel = st.file_uploader("Sube tu Excel con los datos base", type=["xlsx"])
 with col2:
     archivo_plantilla = st.file_uploader("Sube tu Plantilla de Word", type=["docx"])
 
-# --- PASO 2: Selección de Modelos y Generación ---
-st.header("Paso 2: Configura la Generación y Auditoría")
-
-col_gen, col_aud = st.columns(2)
-with col_gen:
-    modelo_generador_nombre = st.selectbox(
-        "🤖 Elige el Modelo GENERADOR",
-        ("Gemini 1.5 Pro", "GPT-4o", "GPT-3.5-Turbo"),
-        help="Este modelo creará el contenido inicial."
-    )
-with col_aud:
-    auditoria_activada = st.checkbox("Activar Auditoría Cruzada", value=True)
-    modelo_auditor_nombre = st.selectbox(
-        "✅ Elige el Modelo AUDITOR",
-        ("GPT-4o", "Gemini 1.5 Pro", "GPT-3.5-Turbo"),
-        index=0,  # GPT-4o por defecto como auditor
-        help="Este modelo revisará el trabajo del generador.",
-        disabled=not auditoria_activada
-    )
-
-if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary"):
-    is_gemini_needed = "Gemini" in [modelo_generador_nombre, modelo_auditor_nombre]
-    is_gpt_needed = any("GPT" in name for name in [modelo_generador_nombre, modelo_auditor_nombre])
-
-    if not archivo_excel or (is_gemini_needed and not gemini_api_key) or (is_gpt_needed and not openai_api_key):
-        st.error("Por favor, sube un archivo Excel y asegúrate de ingresar las claves API necesarias para los modelos seleccionados.")
+# --- PASO 2: Enriquecimiento con IA ---
+st.header("Paso 2: Enriquece tus Datos con IA")
+if st.button("🤖 Iniciar Análisis y Generación", disabled=(not api_key or not archivo_excel)):
+    if not api_key:
+        st.error("Por favor, ingresa tu clave API en la barra lateral izquierda.")
+    elif not archivo_excel:
+        st.warning("Por favor, sube un archivo Excel para continuar.")
     else:
-        gemini_model = setup_gemini_model(gemini_api_key) if is_gemini_needed else True
-        openai_client = setup_openai_model(openai_api_key) if is_gpt_needed else True
+        model = setup_model(api_key)
+        if model:
+            with st.spinner("Procesando archivo Excel y preparando datos..."):
+                df = pd.read_excel(archivo_excel)
+                for col in df.columns:
+                    if df[col].dtype == 'object':
+                        df[col] = df[col].apply(limpiar_html)
 
-        if (gemini_model is None) or (openai_client is None):
-            st.error("Fallo en la configuración de uno de los modelos. Revisa las claves API.")
-        else:
-            modelos = {
-                "Gemini 1.5 Pro": (gemini_model, "gemini-1.5-pro-latest"),
-                "GPT-4o": (openai_client, "gpt-4o"),
-                "GPT-3.5-Turbo": (openai_client, "gpt-3.5-turbo")
-            }
-            cliente_generador, nombre_gen_api = modelos[modelo_generador_nombre]
-            cliente_auditor, nombre_aud_api = modelos[modelo_auditor_nombre]
-
-            df = pd.read_excel(archivo_excel)
-            for col in df.columns:
-                if df[col].dtype == 'object':
-                    df[col] = df[col].apply(limpiar_html)
-
-            columnas_nuevas = ["Que_Evalua", "Justificacion_Correcta", "Analisis_Distractores", "Recomendacion_Fortalecer", "Recomendacion_Avanzar"]
-            for col in columnas_nuevas:
-                if col not in df.columns:
-                    df[col] = ""
+                columnas_nuevas = ["Que_Evalua", "Justificacion_Correcta", "Analisis_Distractores", "Recomendacion_Fortalecer", "Recomendacion_Avanzar"]
+                for col in columnas_nuevas:
+                    if col not in df.columns:
+                        df[col] = ""
+                st.success("Datos limpios y listos.")
 
             progress_bar_main = st.progress(0, text="Iniciando Proceso...")
             total_filas = len(df)
@@ -331,100 +316,68 @@ if st.button("🚀 Iniciar Proceso de Generación y Auditoría", type="primary")
                 st.markdown(f"--- \n ### Procesando Ítem: **{item_id}**")
                 progress_bar_main.progress(i / total_filas, text=f"Procesando ítem {i+1}/{total_filas}")
 
-                # --- Generación y Auditoría de ANÁLISIS ---
                 with st.container(border=True):
-                    st.write("#### 1. Generando y Auditando: Análisis del Ítem")
-                    prompt_actual = construir_prompt_analisis(fila)
-                    texto_actual = generar_contenido(cliente_generador, nombre_gen_api, prompt_actual)
+                    try:
+                        # --- LLAMADA 1: ANÁLISIS CENTRAL (RUTA COGNITIVA Y DISTRACTORES) ---
+                        st.write(f"**Paso 1/3:** Realizando análisis central del ítem...")
+                        prompt_paso1 = construir_prompt_paso1_analisis_central(fila)
+                        response_paso1 = model.generate_content(prompt_paso1)
+                        analisis_central = response_paso1.text.strip()
+                        time.sleep(1)
 
-                    if auditoria_activada and isinstance(texto_actual, str) and "ERROR API" not in texto_actual:
-                        for audit_pass in range(3):
-                            feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
-                            
-                            with st.expander(f"Ver Auditoría de Análisis #{audit_pass + 1}"):
-                                if isinstance(feedback, str):
-                                    st.markdown(f"```\n{feedback}\n```")
-                                else:
-                                    st.error("La auditoría no devolvió una respuesta de texto válida.")
-
-                            if isinstance(feedback, str) and "APROBADO" in feedback:
-                                st.success(f"Análisis Aprobado en el intento #{audit_pass + 1}")
-                                break
-                            
-                            if audit_pass < 2:
-                                st.warning(f"Análisis requiere revisión. Refinando... (Intento {audit_pass + 2})")
-                                refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido."
-                                texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
-                                time.sleep(1)
-                            else:
-                                st.error(f"El análisis para el ítem {item_id} no fue aprobado después de 3 intentos.")
-                    
-                    if isinstance(texto_actual, str) and texto_actual:
-                        header_que_evalua = "Qué Evalúa:"
                         header_correcta = "Ruta Cognitiva Correcta:"
                         header_distractores = "Análisis de Opciones No Válidas:"
-                        idx_correcta = texto_actual.find(header_correcta)
-                        idx_distractores = texto_actual.find(header_distractores)
+                        idx_distractores = analisis_central.find(header_distractores)
                         
-                        if idx_correcta != -1 and idx_distractores != -1 and texto_actual.startswith(header_que_evalua):
-                            df.loc[i, "Que_Evalua"] = texto_actual[len(header_que_evalua):idx_correcta].strip()
-                            df.loc[i, "Justificacion_Correcta"] = texto_actual[idx_correcta + len(header_correcta):idx_distractores].strip()
-                            df.loc[i, "Analisis_Distractores"] = texto_actual[idx_distractores + len(header_distractores):].strip()
-                        else:
-                            df.loc[i, "Que_Evalua"] = "ERROR DE PARSEO"
-                            df.loc[i, "Justificacion_Correcta"] = texto_actual
-                            df.loc[i, "Analisis_Distractores"] = ""
-                    else:
-                        st.warning(f"La API no devolvió un texto válido para el análisis del ítem {item_id}.")
-                        df.loc[i, "Que_Evalua"] = "ERROR API: Respuesta no válida"
-                        df.loc[i, "Justificacion_Correcta"] = "ERROR API: Respuesta no válida"
-                        df.loc[i, "Analisis_Distractores"] = "ERROR API: Respuesta no válida"
+                        if idx_distractores == -1:
+                            raise ValueError("No se encontró el separador 'Análisis de Opciones No Válidas' en la respuesta del paso 1.")
 
-                # --- Generación y Auditoría de RECOMENDACIONES ---
-                with st.container(border=True):
-                    st.write("#### 2. Generando y Auditando: Recomendaciones Pedagógicas")
-                    prompt_actual = construir_prompt_recomendaciones(fila)
-                    texto_actual = generar_contenido(cliente_generador, nombre_gen_api, prompt_actual)
-                    
-                    if auditoria_activada and isinstance(texto_actual, str) and "ERROR API" not in texto_actual:
-                        for audit_pass in range(3):
-                            feedback = generar_contenido(cliente_auditor, nombre_aud_api, construir_prompt_auditoria(prompt_actual, texto_actual))
-                            
-                            with st.expander(f"Ver Auditoría de Recomendaciones #{audit_pass + 1}"):
-                                if isinstance(feedback, str):
-                                    st.markdown(f"```\n{feedback}\n```")
-                                else:
-                                    st.error("La auditoría no devolvió una respuesta de texto válida.")
-                            
-                            if isinstance(feedback, str) and "APROBADO" in feedback:
-                                st.success(f"Recomendaciones Aprobadas en el intento #{audit_pass + 1}")
-                                break
+                        ruta_cognitiva = analisis_central[len(header_correcta):idx_distractores].strip()
+                        analisis_distractores = analisis_central[idx_distractores:].strip()
 
-                            if audit_pass < 2:
-                                st.warning(f"Recomendaciones requieren revisión. Refinando... (Intento {audit_pass + 2})")
-                                refine_prompt = f"{prompt_actual}\n\nEl texto anterior que generaste fue auditado. Aquí están las sugerencias para corregirlo: {feedback}\n\nGenera una nueva versión corregida que cumpla con el formato de salida requerido (Fortalecer y Avanzar)."
-                                texto_actual = generar_contenido(cliente_generador, nombre_gen_api, refine_prompt)
-                                time.sleep(1)
-                            else:
-                                st.error(f"Las recomendaciones para el ítem {item_id} no fueron aprobadas después de 3 intentos.")
-
-                    if isinstance(texto_actual, str) and texto_actual:
+                        # --- LLAMADA 2: SÍNTESIS DEL "QUÉ EVALÚA" ---
+                        st.write(f"**Paso 2/3:** Sintetizando 'Qué Evalúa'...")
+                        prompt_paso2 = construir_prompt_paso2_sintesis_que_evalua(analisis_central, fila)
+                        response_paso2 = model.generate_content(prompt_paso2)
+                        que_evalua = response_paso2.text.strip()
+                        time.sleep(1)
+                        
+                        # --- LLAMADA 3: GENERACIÓN DE RECOMENDACIONES ---
+                        st.write(f"**Paso 3/3:** Generando recomendaciones pedagógicas...")
+                        prompt_paso3 = construir_prompt_paso3_recomendaciones(que_evalua, analisis_central, fila)
+                        response_paso3 = model.generate_content(prompt_paso3)
+                        recomendaciones = response_paso3.text.strip()
+                        
                         titulo_avanzar = "RECOMENDACIÓN PARA AVANZAR"
-                        idx_avanzar = texto_actual.upper().find(titulo_avanzar)
-                        if idx_avanzar != -1:
-                            df.loc[i, "Recomendacion_Fortalecer"] = texto_actual[:idx_avanzar].strip()
-                            df.loc[i, "Recomendacion_Avanzar"] = texto_actual[idx_avanzar:].strip()
-                        else:
-                            df.loc[i, "Recomendacion_Fortalecer"] = texto_actual
-                            df.loc[i, "Recomendacion_Avanzar"] = "ERROR DE PARSEO: No se encontró 'AVANZAR'"
-                    else:
-                        st.warning(f"La API no devolvió un texto válido para las recomendaciones del ítem {item_id}.")
-                        df.loc[i, "Recomendacion_Fortalecer"] = "ERROR API: Respuesta no válida"
-                        df.loc[i, "Recomendacion_Avanzar"] = "ERROR API: Respuesta no válida"
+                        idx_avanzar = recomendaciones.upper().find(titulo_avanzar)
+                        
+                        if idx_avanzar == -1:
+                           raise ValueError("No se encontró el separador 'RECOMENDACIÓN PARA AVANZAR' en la respuesta del paso 3.")
 
+                        fortalecer = recomendaciones[:idx_avanzar].strip()
+                        avanzar = recomendaciones[idx_avanzar:].strip()
+
+                        # --- GUARDAR TODO EN EL DATAFRAME ---
+                        df.loc[i, "Que_Evalua"] = que_evalua
+                        df.loc[i, "Justificacion_Correcta"] = ruta_cognitiva
+                        df.loc[i, "Analisis_Distractores"] = analisis_distractores
+                        df.loc[i, "Recomendacion_Fortalecer"] = fortalecer
+                        df.loc[i, "Recomendacion_Avanzar"] = avanzar
+                        st.success(f"Ítem {item_id} procesado con éxito.")
+
+                    except Exception as e:
+                        st.error(f"Ocurrió un error procesando el ítem {item_id}: {e}")
+                        df.loc[i, "Que_Evalua"] = "ERROR EN PROCESAMIENTO"
+                        df.loc[i, "Justificacion_Correcta"] = f"Error: {e}"
+                        df.loc[i, "Analisis_Distractores"] = "ERROR EN PROCESAMIENTO"
+                        df.loc[i, "Recomendacion_Fortalecer"] = "ERROR EN PROCESAMIENTO"
+                        df.loc[i, "Recomendacion_Avanzar"] = "ERROR EN PROCESAMIENTO"
+            
             progress_bar_main.progress(1.0, text="¡Proceso completado!")
             st.session_state.df_enriquecido = df
             st.balloons()
+        else:
+            st.error("No se pudo inicializar el modelo de IA. Verifica tu clave API.")
 
 
 # --- PASO 3: Vista Previa y Verificación ---
