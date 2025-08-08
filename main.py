@@ -264,7 +264,7 @@ Basándote en los ejemplos de alta calidad y los nuevos insumos, genera dos reco
 
 ### 1. Recomendación para FORTALECER 💪
 - **Objetivo:** Descomponer el proceso cognitivo descrito en el 'Qué Evalúa' en pasos manejables.
-- **Actividad:** Diseña una actividad-juego simple que sirva de andamio para la habilidad central.
+- **Actividad:** Diseña una actividad que sirva de andamio para la habilidad central. No le pongas ningun nombre a la actividad.
 - **Preguntas:** Formula preguntas que guíen el razonamiento paso a paso.
 - **Contexto Pedagógico:** La actividad debe ser un microcosmos de dicha evidencia, pero simplificada. Debes **descomponer el proceso cognitivo en pasos manejables**.
 - **Actividad Propuesta:** Diseña una actividad de lectura que sea **novedosa, creativa y lúdica**. **Evita explícitamente ejercicios típicos** como cuestionarios, llenar espacios en blanco o buscar ideas principales de forma tradicional. La actividad debe ser útil para los profesores.
@@ -274,7 +274,7 @@ Basándote en los ejemplos de alta calidad y los nuevos insumos, genera dos reco
 ### 2. Recomendación para AVANZAR 🚀
 - **Objetivo:** Crear una progresión cognitiva clara desde Fortalecer, dentro de la misma Competencia.
 - **Objetivo Central:** Asegurar una **progresión cognitiva clara y directa en la que el estudiante avanza** cuando se compara con la actividad de Fortalecer.
-- **Contexto Pedagógico:** La actividad para Avanzar debe ser la **evolución natural y más compleja de la habilidad trabajada en Fortalecer**. La conexión entre ambas debe ser explícita y lógica.
+- **Contexto Pedagógico:** La actividad para Avanzar debe ser la **evolución natural y más compleja de la habilidad trabajada en Fortalecer**. La conexión entre ambas debe ser explícita y lógica.  No le pongas ningun nombre a la actividad.
 - **Actividad Propuesta:** Diseña un desafío intelectual de lectura o análisis comparativo que sea **estimulante y poco convencional**. La actividad debe promover el pensamiento crítico y la transferencia de habilidades de una manera que no sea habitual en el aula.
 - **Preguntas Orientadoras:** Formula preguntas abiertas que exijan **evaluación, síntesis, aplicación o metacognición**, demostrando un salto cualitativo respecto a las preguntas de Fortalecer.
 
