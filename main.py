@@ -155,33 +155,44 @@ Eres un experto psicómetra y pedagogo. Tu misión es deconstruir un ítem de ev
 {EJEMPLOS_ANALISIS_PREMIUM}
 
 🧠 INSUMOS DE ENTRADA (Para el nuevo ítem que debes analizar):
-- Descripción del Ítem: {descripcion_item}
+- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
+- Descripción del Ítem: {fila.get('ItemEnunciado', 'No aplica')}
 - Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Competencia: {fila.get('CompetenciaNombre', '')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
+- Tipología Textual (Solo para Lectura Crítica): {fila.get('Tipologia Textual', 'No aplica')}
+- Grado Escolar: {fila.get('ItemGradoId', '')}
+- Análisis de Errores Comunes: {fila.get('Analisis_Errores', 'No aplica')}
+- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
+- Opción A: {fila.get('OpcionA', 'No aplica')}
+- Opción B: {fila.get('OpcionB', 'No aplica')}
+- Opción C: {fila.get('OpcionC', 'No aplica')}
+- Opción D: {fila.get('OpcionD', 'No aplica')}
+
 
 📝 INSTRUCCIONES
 Basándote en los ejemplos de alta calidad y los nuevos insumos, realiza el siguiente proceso en dos fases:
 
 FASE 1: RUTA COGNITIVA
+Describe, en un párrafo continuo y de forma impersonal, el procedimiento mental que un estudiante debe ejecutar para llegar a la respuesta correcta.
 1.  **Genera la Ruta Cognitiva:** Describe el paso a paso mental y lógico que un estudiante debe seguir para llegar a la respuesta correcta. Usa verbos que representen procesos cognitivos.
 2.  **Auto-Verificación:** Revisa que la ruta se alinee con la Competencia ('{fila.get('CompetenciaNombre', '')}') y la Evidencia ('{fila.get('EvidenciaNombre', '')}').
 3.  **Justificación Final:** El último paso debe justificar la elección de la respuesta correcta.
 
 FASE 2: ANÁLISIS DE OPCIONES NO VÁLIDAS
 - Para cada opción incorrecta, identifica la naturaleza del error y explica el razonamiento fallido.
+- Luego, explica el posible razonamiento que lleva al estudiante a cometer ese error.
+- Finalmente, clarifica por qué esa opción es incorrecta en el contexto de la tarea evaluativa.
 
 ✍️ FORMATO DE SALIDA
 **REGLA CRÍTICA:** Responde únicamente con los dos títulos siguientes, en este orden y sin añadir texto adicional.
 
 Ruta Cognitiva Correcta:
-[Párrafo continuo y detallado.]
+[Párrafo continuo y detallado.] Debe describir como es la secuencia de procesos cognitivos. Ejemplo: Para resolver correctamente este ítem, el estudiante primero debe [verbo cognitivo 1]... Luego, necesita [verbo cognitivo 2]... Este proceso le permite [verbo cognitivo 3]..., lo que finalmente lo lleva a concluir que la opción [letra de la respuesta correcta] es la correcta porque [justificación final].
 
 Análisis de Opciones No Válidas:
-- **Opción [Letra]:** [Análisis del error...]
-- **Opción [Letra]:** [Análisis del error...]
-- **Opción [Letra]:** [Análisis del error...]
+- **Opción [Letra del distractor]:** El estudiante podría escoger esta opción si comete un error de [naturaleza de la confusión u error], lo que lo lleva a pensar que [razonamiento erróneo]. Sin embargo, esto es incorrecto porque [razón clara y concisa].
 """
 
 def construir_prompt_paso2_sintesis_que_evalua(analisis_central_generado, fila):
@@ -208,8 +219,20 @@ ANÁLISIS DE LA RUTA COGNITIVA:
 
 TAXONOMÍA DE REFERENCIA:
 - Competencia: {fila.get('CompetenciaNombre', '')}
+- Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
+
+🧠 OTROS INSUMOS DE ENTRADA
+- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
+- Descripción del Ítem: {fila.get('ItemEnunciado', 'No aplica')}
+- Grado Escolar: {fila.get('ItemGradoId', '')}
+- Análisis de Errores Comunes: {fila.get('Analisis_Errores', 'No aplica')}
+- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
+- Opción A: {fila.get('OpcionA', 'No aplica')}
+- Opción B: {fila.get('OpcionB', 'No aplica')}
+- Opción C: {fila.get('OpcionC', 'No aplica')}
+- Opción D: {fila.get('OpcionD', 'No aplica')}
 
 📝 INSTRUCCIONES
 Basándote **exclusivamente** en el ANÁLISIS DE LA RUTA COGNITIVA, redacta una única frase (máximo 2 renglones) que resuma la habilidad principal que se está evaluando.
@@ -233,9 +256,16 @@ Eres un diseñador instruccional experto, especializado en crear actividades de 
 🧠 INSUMOS DE ENTRADA (Para el nuevo ítem):
 - Qué Evalúa el Ítem: {que_evalua_sintetizado}
 - Análisis Detallado del Ítem: {analisis_central_generado}
+- Texto/Fragmento: {fila.get('ItemContexto', 'No aplica')}
+- Descripción del Ítem: {fila.get('ItemEnunciado', 'No aplica')}
+- Componente: {fila.get('ComponenteNombre', 'No aplica')}
 - Competencia: {fila.get('CompetenciaNombre', '')}
 - Aprendizaje Priorizado: {fila.get('AfirmacionNombre', '')}
 - Evidencia de Aprendizaje: {fila.get('EvidenciaNombre', '')}
+- Tipología Textual (Solo para Lectura Crítica): {fila.get('Tipologia Textual', 'No aplica')}
+- Grado Escolar: {fila.get('ItemGradoId', '')}
+- Análisis de Errores Comunes: {fila.get('Analisis_Errores', 'No aplica')}
+- Respuesta correcta: {fila.get('AlternativaClave', 'No aplica')}
 
 📝 INSTRUCCIONES PARA GENERAR LAS RECOMENDACIONES
 Basándote en los ejemplos de alta calidad y los nuevos insumos, genera dos recomendaciones (Fortalecer y Avanzar) que cumplan con estas reglas inviolables:
@@ -248,20 +278,38 @@ Basándote en los ejemplos de alta calidad y los nuevos insumos, genera dos reco
 - **Objetivo:** Descomponer el proceso cognitivo descrito en el 'Qué Evalúa' en pasos manejables.
 - **Actividad:** Diseña una actividad-juego simple que sirva de andamio para la habilidad central.
 - **Preguntas:** Formula preguntas que guíen el razonamiento paso a paso.
+- **Contexto Pedagógico:** La actividad debe ser un microcosmos de dicha evidencia, pero simplificada. Debes **descomponer el proceso cognitivo en pasos manejables**.
+- **Actividad Propuesta:** Diseña una actividad de lectura que sea **novedosa, creativa y lúdica**. **Evita explícitamente ejercicios típicos** como cuestionarios, llenar espacios en blanco o buscar ideas principales de forma tradicional. La actividad debe ser útil para los profesores.
+- **Preguntas Orientadoras:** Formula preguntas que funcionen como un **"paso a paso" del razonamiento**, guiando al estudiante a través del proceso de forma sutil.
+
 
 ### 2. Recomendación para AVANZAR 🚀
 - **Objetivo:** Crear una progresión cognitiva clara desde Fortalecer, dentro de la misma Competencia.
-- **Actividad:** Diseña un desafío intelectual estimulante y poco convencional.
-- **Preguntas:** Formula preguntas abiertas que exijan evaluación, síntesis o transferencia.
+- **Objetivo Central:** Asegurar una **progresión cognitiva clara y directa en la que el estudiante avanza** cuando se compara con la actividad de Fortalecer.
+- **Contexto Pedagógico:** La actividad para Avanzar debe ser la **evolución natural y más compleja de la habilidad trabajada en Fortalecer**. La conexión entre ambas debe ser explícita y lógica.
+- **Actividad Propuesta:** Diseña un desafío intelectual de lectura o análisis comparativo que sea **estimulante y poco convencional**. La actividad debe promover el pensamiento crítico y la transferencia de habilidades de una manera que no sea habitual en el aula.
+- **Preguntas Orientadoras:** Formula preguntas abiertas que exijan **evaluación, síntesis, aplicación o metacognición**, demostrando un salto cualitativo respecto a las preguntas de Fortalecer.
 
-✍️ FORMATO DE SALIDA
-**IMPORTANTE:** Usa la siguiente estructura exacta, sin añadir texto adicional.
+✍️ FORMATO DE SALIDA DE LAS RECOMENDACIONES
+**IMPORTANTE: Responde de forma directa, usando obligatoriamente la siguiente estructura. No añadas texto adicional.**
+- **Redacción Impersonal:** Utiliza siempre una redacción profesional e impersonal (ej. "se sugiere (sin mencionar el docente)", "la tarea consiste en", "se entregan tarjetas").
+- **Sin Conclusiones:** Termina directamente con la lista de preguntas.
 
 RECOMENDACIÓN PARA FORTALECER EL APRENDIZAJE EVALUADO EN EL ÍTEM
-[Tu recomendación para Fortalecer aquí]
+Para fortalecer la habilidad de [verbo clave extraído de la Evidencia de Aprendizaje], se sugiere [descripción de la estrategia de andamiaje para ese proceso exacto].
+Una actividad que se puede hacer es: [Descripción detallada de la actividad novedosa y creativa, que no implica escritura].
+Las preguntas orientadoras para esta actividad, entre otras, pueden ser:
+- [Pregunta 1: Que guíe el primer paso del proceso cognitivo]
+- [Pregunta 2: Que ayude a analizar un componente clave del proceso]
+- [Pregunta 3: Que conduzca a la conclusión del proceso base]
 
 RECOMENDACIÓN PARA AVANZAR EN EL APRENDIZAJE EVALUADO EN EL ÍTEM
-[Tu recomendación para Avanzar aquí]
+Para avanzar desde [proceso cognitivo de Fortalecer] hacia la habilidad de [verbo clave del proceso cognitivo superior], se sugiere [descripción de la estrategia de complejización].
+Una actividad que se puede hacer es: [Descripción detallada de la actividad estimulante y poco convencional, que no implique escritura].
+Las preguntas orientadoras para esta actividad, entre otras, pueden ser:
+- [Pregunta 1: De análisis o evaluación que requiera un razonamiento más profundo]
+- [Pregunta 2: De aplicación, comparación o transferencia a un nuevo contexto]
+- [Pregunta 3: De metacognición o pensamiento crítico sobre el proceso completo]
 """
 
 # --- INTERFAZ PRINCIPAL DE STREAMLIT ---
