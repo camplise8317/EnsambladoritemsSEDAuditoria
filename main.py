@@ -225,7 +225,7 @@ TAXONOMÍA DE REFERENCIA:
 📝 INSTRUCCIONES
 Basándote **exclusivamente** en el ANÁLISIS DE LA RUTA COGNITIVA, redacta una única frase (máximo 2 renglones) que resuma la habilidad principal que se está evaluando.
 - **Regla 1:** La frase debe comenzar obligatoriamente con "Este ítem evalúa la capacidad del estudiante para...".
-- **Regla 2:** La frase debe describir los **procesos cognitivos**, no el contenido del texto o del ítem.
+- **Regla 2:** La frase debe describir los **procesos cognitivos**, no debe contener especificamene ninguno de los elementos del texto o del ítem, busca en cambio palabras/expresiones genéricas en reemplazo de elementos del item/texto cuando es necesario.
 - **Regla 3:** Utiliza la TAXONOMÍA DE REFERENCIA para asegurar que el lenguaje sea preciso y alineado.
 
 ✍️ FORMATO DE SALIDA
